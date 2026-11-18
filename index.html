@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sammlung</title>
+<style>
+  :root {
+    --bg: #e9edf0;
+    --ink: #1c2430;
+    --muted: #6b7684;
+    --tile: #f8fafb;
+    --tile-line: #d3dae0;
+    --tile-hover: #ffffff;
+    --own: #d9e3e1;          /* Farbe der unteren, eigenen Kacheln */
+    --own-line: #b7c9c5;
+    --focus: #3b6ea5;
+    --shadow: 0 1px 0 rgba(28,36,48,.06), 0 6px 16px -10px rgba(28,36,48,.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161b22; --ink: #e6ebf0; --muted: #8b97a5;
+      --tile: #1f2630; --tile-line: #2d3743; --tile-hover: #262f3b;
+      --own: #1f2e2c; --own-line: #33504b; --focus: #7fb0e6;
+      --shadow: 0 6px 16px -10px rgba(0,0,0,.7);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; color: var(--ink);
+    font: 16px/1.4 "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+  main { width: min(960px, 100% - 2rem); margin: 0 auto; padding: 3.5rem 0 2rem; flex: 1; }
+  h1 {
+    font: 600 clamp(1.8rem, 4vw, 2.6rem)/1.1 Georgia, "Times New Roman", serif;
+    letter-spacing: -.02em; margin: 0 0 2.5rem;
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; }
+  .tile {
+    --accent: #5b8fb9;
+    display: flex; align-items: center; gap: .7rem;
+    min-height: 4.2rem; padding: .8rem 1rem;
+    background: var(--tile); color: inherit; text-decoration: none;
+    border: 1px solid var(--tile-line); border-left: 5px solid var(--accent);
+    border-radius: 6px 14px 6px 14px; box-shadow: var(--shadow);
+    transition: transform .15s, background .15s;
+  }
+  .tile:hover { background: var(--tile-hover); transform: translateY(-2px); }
+  .tile:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .emoji { font-size: 1.6rem; line-height: 1; flex: none; }
+  .name { font-weight: 600; overflow-wrap: anywhere; }
+
+  /* dezente Akzentfarben, wiederholen sich im Rhythmus */
+  .grid .tile:nth-child(6n+1) { --accent: #5b8fb9; }
+  .grid .tile:nth-child(6n+2) { --accent: #6fa58b; }
+  .grid .tile:nth-child(6n+3) { --accent: #c49a5a; }
+  .grid .tile:nth-child(6n+4) { --accent: #9a82b5; }
+  .grid .tile:nth-child(6n+5) { --accent: #b97d7d; }
+  .grid .tile:nth-child(6n+6) { --accent: #6aa3a8; }
+
+  .own-title { margin: 3rem 0 .8rem; font-size: .95rem; color: var(--muted); font-weight: 500; }
+  .own .tile { background: var(--own); border-color: var(--own-line); border-left-color: var(--own-line); }
+  .own .tile:hover { background: var(--own); filter: brightness(1.04); }
+  .own .tile.empty { opacity: .45; border-style: dashed; pointer-events: none; box-shadow: none; }
+
+  footer { text-align: center; padding: 1.5rem; }
+  #menu-btn { background: none; border: 0; color: var(--muted); opacity: .35; font-size: 1.2rem; cursor: pointer; padding: .3rem .8rem; }
+  #menu-btn:hover { opacity: 1; }
+
+  /* Verstecktes Bearbeiten-Menü */
+  dialog {
+    width: min(560px, 100% - 1.5rem); max-height: 90vh; padding: 1.4rem;
+    border: 1px solid var(--tile-line); border-radius: 12px;
+    background: var(--tile); color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(10,14,20,.5); }
+  dialog h2 { margin: 0 0 1rem; font: 600 1.2rem Georgia, serif; }
+  .row { display: grid; grid-template-columns: 3.4rem 1fr 1.6fr; gap: .4rem; margin-bottom: .5rem; }
+  input {
+    min-width: 0; padding: .5rem .6rem; font: inherit; font-size: .9rem;
+    background: var(--bg); color: var(--ink); border: 1px solid var(--tile-line); border-radius: 6px;
+  }
+  .actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: 1.1rem; }
+  .actions button { font: inherit; padding: .5rem 1rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--tile-line); background: var(--bg); color: var(--ink); }
+  .actions .primary { background: var(--focus); border-color: var(--focus); color: #fff; }
+
+  @media (max-width: 560px) {
+    .tile { flex-direction: column; justify-content: center; text-align: center; gap: .3rem; padding: .7rem .4rem; border-left-width: 1px; border-top: 4px solid var(--accent); }
+    .own .tile { border-top-color: var(--own-line); }
+    .name { font-size: .82rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { .tile { transition: none; } }
+</style>
+</head>
+<body>
+
+<main>
+  <!-- ▼ TITEL DER SEITE: hier ändern ▼ -->
+  <h1>Sammlung</h1>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="own-title">Eigene Kacheln</p>
+  <div class="grid own" id="own"></div>
+</main>
+
+<footer><button id="menu-btn" aria-label="Eigene Kacheln bearbeiten" title="Bearbeiten (Strg+Umschalt+E)">•</button></footer>
+
+<dialog id="dlg">
+  <h2>Eigene Kacheln bearbeiten</h2>
+  <form method="dialog" id="form">
+    <div id="rows"></div>
+    <div class="actions">
+      <button type="button" id="reset">Zurücksetzen</button>
+      <button type="button" id="cancel">Abbrechen</button>
+      <button type="submit" class="primary" id="save">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+/* =====================================================================
+   ▼▼▼  HIER DEINE WEBSITES EINTRAGEN  ▼▼▼
+
+   Insgesamt 60 Plätze (3 Spalten × 20 Reihen), in Reihenfolge.
+   Eine Kachel erscheint NUR, wenn bei "url" ein Link steht.
+
+   Beispiel – so füllst du Platz 1:
+     { emoji: "🌱", name: "Mein Garten-Blog", url: "https://example.com" },
+
+   emoji = Symbol (darf leer bleiben)
+   name  = Text auf der Kachel
+   url   = Link, der beim Klick in einem neuen Tab öffnet
+   ===================================================================== */
+const SITES = [
+  /*  1 */ { emoji: "⛰️", name: "Timer", url: "https://elias-m324.github.io/Mathe-Timer/" },
+  /*  2 */ { emoji: "⛰️", name: "Hilfskarten", url: "https://elias-m324.github.io/Hilfskarten/" },
+  /*  3 */ { emoji: "📊", name: "Counter", url: "https://elias-m324.github.io/Counter/" },
+  /*  4 */ { emoji: "", name: "", url: "" },
+  /*  5 */ { emoji: "", name: "", url: "" },
+  /*  6 */ { emoji: "", name: "", url: "" },
+  /*  7 */ { emoji: "", name: "", url: "" },
+  /*  8 */ { emoji: "", name: "", url: "" },
+  /*  9 */ { emoji: "", name: "", url: "" },
+  /* 10 */ { emoji: "", name: "", url: "" },
+  /* 11 */ { emoji: "", name: "", url: "" },
+  /* 12 */ { emoji: "", name: "", url: "" },
+  /* 13 */ { emoji: "", name: "", url: "" },
+  /* 14 */ { emoji: "", name: "", url: "" },
+  /* 15 */ { emoji: "", name: "", url: "" },
+  /* 16 */ { emoji: "", name: "", url: "" },
+  /* 17 */ { emoji: "", name: "", url: "" },
+  /* 18 */ { emoji: "", name: "", url: "" },
+  /* 19 */ { emoji: "", name: "", url: "" },
+  /* 20 */ { emoji: "", name: "", url: "" },
+  /* 21 */ { emoji: "", name: "", url: "" },
+  /* 22 */ { emoji: "", name: "", url: "" },
+  /* 23 */ { emoji: "", name: "", url: "" },
+  /* 24 */ { emoji: "", name: "", url: "" },
+  /* 25 */ { emoji: "", name: "", url: "" },
+  /* 26 */ { emoji: "", name: "", url: "" },
+  /* 27 */ { emoji: "", name: "", url: "" },
+  /* 28 */ { emoji: "", name: "", url: "" },
+  /* 29 */ { emoji: "", name: "", url: "" },
+  /* 30 */ { emoji: "", name: "", url: "" },
+  /* 31 */ { emoji: "", name: "", url: "" },
+  /* 32 */ { emoji: "", name: "", url: "" },
+  /* 33 */ { emoji: "", name: "", url: "" },
+  /* 34 */ { emoji: "", name: "", url: "" },
+  /* 35 */ { emoji: "", name: "", url: "" },
+  /* 36 */ { emoji: "", name: "", url: "" },
+  /* 37 */ { emoji: "", name: "", url: "" },
+  /* 38 */ { emoji: "", name: "", url: "" },
+  /* 39 */ { emoji: "", name: "", url: "" },
+  /* 40 */ { emoji: "", name: "", url: "" },
+  /* 41 */ { emoji: "", name: "", url: "" },
+  /* 42 */ { emoji: "", name: "", url: "" },
+  /* 43 */ { emoji: "", name: "", url: "" },
+  /* 44 */ { emoji: "", name: "", url: "" },
+  /* 45 */ { emoji: "", name: "", url: "" },
+  /* 46 */ { emoji: "", name: "", url: "" },
+  /* 47 */ { emoji: "", name: "", url: "" },
+  /* 48 */ { emoji: "", name: "", url: "" },
+  /* 49 */ { emoji: "", name: "", url: "" },
+  /* 50 */ { emoji: "", name: "", url: "" },
+  /* 51 */ { emoji: "", name: "", url: "" },
+  /* 52 */ { emoji: "", name: "", url: "" },
+  /* 53 */ { emoji: "", name: "", url: "" },
+  /* 54 */ { emoji: "", name: "", url: "" },
+  /* 55 */ { emoji: "", name: "", url: "" },
+  /* 56 */ { emoji: "", name: "", url: "" },
+  /* 57 */ { emoji: "", name: "", url: "" },
+  /* 58 */ { emoji: "", name: "", url: "" },
+  /* 59 */ { emoji: "", name: "", url: "" },
+  /* 60 */ { emoji: "", name: "", url: "" },
+];
+/* ▲▲▲  ENDE DER EINTRÄGE  ▲▲▲ */
+
+
+/* ▼ Startwerte der 6 unteren Kacheln (3×2). Änderungen über das
+     versteckte Menü (• ganz unten oder Strg+Umschalt+E) überschreiben
+     diese Werte und werden im Browser gespeichert. ▼ */
+const OWN_DEFAULTS = [
+  { emoji: "", name: "", url: "" },
+  { emoji: "", name: "", url: "" },
+  { emoji: "", name: "", url: "" },
+  { emoji: "", name: "", url: "" },
+  { emoji: "", name: "", url: "" },
+  { emoji: "", name: "", url: "" },
+];
+const STORAGE_KEY = "meine-websites-eigene-kacheln";
+
+
+/* ---------- Ab hier muss nichts geändert werden ---------- */
+const $ = id => document.getElementById(id);
+
+function cleanUrl(u) {
+  u = (u || "").trim();
+  if (!u) return "";
+  return /^[a-z][a-z0-9+.-]*:/i.test(u) ? u : "https://" + u;
+}
+function safeUrl(u) {
+  u = cleanUrl(u);
+  return /^(https?:|mailto:)/i.test(u) ? u : "";
+}
+function makeTile(s, own) {
+  const url = safeUrl(s.url);
+  const el = document.createElement(url ? "a" : "div");
+  el.className = "tile" + (url ? "" : " empty");
+  if (url) { el.href = url; el.target = "_blank"; el.rel = "noopener noreferrer"; }
+  if (s.emoji) { const e = document.createElement("span"); e.className = "emoji"; e.textContent = s.emoji; el.append(e); }
+  const n = document.createElement("span");
+  n.className = "name";
+  n.textContent = s.name || (own ? "leer" : url);
+  el.append(n);
+  return el;
+}
+
+function renderMain() {
+  const g = $("grid"); g.replaceChildren();
+  SITES.slice(0, 60).forEach(s => { if (safeUrl(s.url)) g.append(makeTile(s, false)); });
+}
+
+function loadOwn() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (Array.isArray(saved) && saved.length === 6) return saved;
+  } catch (e) {}
+  return OWN_DEFAULTS.map(o => ({ ...o }));
+}
+let own = loadOwn();
+
+function renderOwn() {
+  const g = $("own"); g.replaceChildren();
+  own.forEach(s => g.append(makeTile(s, true)));
+}
+
+/* Menü */
+function openMenu() {
+  const rows = $("rows"); rows.replaceChildren();
+  own.forEach((s, i) => {
+    const r = document.createElement("div"); r.className = "row";
+    [["emoji", "😀"], ["name", "Text"], ["url", "Link"]].forEach(([k, ph]) => {
+      const inp = document.createElement("input");
+      inp.value = s[k] || ""; inp.placeholder = ph; inp.dataset.i = i; inp.dataset.k = k;
+      inp.setAttribute("aria-label", `Kachel ${i + 1} ${ph}`);
+      r.append(inp);
+    });
+    rows.append(r);
+  });
+  $("dlg").showModal();
+}
+$("menu-btn").addEventListener("click", openMenu);
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "e") { e.preventDefault(); openMenu(); }
+});
+$("cancel").addEventListener("click", () => $("dlg").close());
+$("save").addEventListener("click", () => {
+  document.querySelectorAll("#rows input").forEach(inp => { own[inp.dataset.i][inp.dataset.k] = inp.value.trim(); });
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(own)); } catch (e) {}
+  renderOwn();
+});
+$("reset").addEventListener("click", () => {
+  if (!confirm("Alle unteren Kacheln auf die Startwerte zurücksetzen?")) return;
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+  own = OWN_DEFAULTS.map(o => ({ ...o }));
+  renderOwn(); $("dlg").close();
+});
+
+renderMain();
+renderOwn();
+</script>
+</body>
+</html>
